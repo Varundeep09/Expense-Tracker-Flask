@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="hero-container">
+        <div class="hero-content">
+            <h1 class="hero-title">Smart Expense Tracking</h1>
+            <p class="hero-subtitle">Take control of your finances with intelligent budgeting, spending forecasts, and personalized insights.</p>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <h3>Visual Analytics</h3>
+                    <p>Beautiful charts and insights to understand your spending patterns</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h3>Smart Forecasting</h3>
+                    <p>AI-powered predictions to help you stay within budget</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <h3>Overspend Alerts</h3>
+                    <p>Real-time notifications with personalized recommendations</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-download"></i>
+                    </div>
+                    <h3>Export Reports</h3>
+                    <p>Download detailed monthly reports in CSV format</p>
+                </div>
+            </div>
+            
+            <div class="cta-buttons">
+                <a href="{{ url_for('register') }}" class="btn btn-primary">Get Started Free</a>
+                <a href="{{ url_for('login') }}" class="btn btn-secondary">Sign In</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}All Expenses - ExpenseWise{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+
+    <!-- Navigation / Top Menu -->
+    <nav class="top-nav" style="display:flex; gap:1rem; margin-bottom: 1.5rem;">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary">Dashboard</a>
+        <a href="{{ url_for('add_expense') }}" class="btn btn-outline-primary">Add Expense</a>
+        <a href="{{ url_for('budget') }}" class="btn btn-outline-primary">Budget</a>
+        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger" style="margin-left:auto;">Logout</a>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="dashboard-header">
+        <h1>All Expenses</h1>
+        <p>Manage your expenses and keep track of your spending</p>
+    </div>
+
+    <!-- Action Buttons -->
+    <div style="margin-bottom: 1.5rem;">
+        <a href="{{ url_for('add_expense') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Expense
+        </a>
+        <a href="{{ url_for('export_csv') }}" class="btn btn-secondary">
+            <i class="fas fa-download"></i> Export CSV
+        </a>
+    </div>
+
+    <!-- Expenses Table Card -->
+    <div class="dashboard-card">
+        <table class="expenses-table" style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background-color: #f0f0f0;">
+                    <th style="padding: 10px; text-align:left;">Date</th>
+                    <th style="padding: 10px; text-align:left;">Category</th>
+                    <th style="padding: 10px; text-align:left;">Description</th>
+                    <th style="padding: 10px; text-align:right;">Amount</th>
+                    <th style="padding: 10px; text-align:center;">Type</th>
+                    <th style="padding: 10px; text-align:center;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in expenses.items %}
+                <tr style="border-bottom: 1px solid #ddd;">
+                    <td style="padding: 10px;">{{ expense.date.strftime('%b %d, %Y') }}</td>
+                    <td style="padding: 10px; display:flex; align-items:center; gap:6px;">
+                        <i class="fas fa-{{ {
+                            'food': 'utensils',
+                            'transport': 'car',
+                            'entertainment': 'film',
+                            'shopping': 'shopping-bag',
+                            'bills': 'file-invoice',
+                            'healthcare': 'heartbeat',
+                            'education': 'graduation-cap',
+                            'travel': 'plane',
+                            'other': 'tag'
+                        }[expense.category] }}" style="color:#555;"></i>
+                        {{ expense.category.title() }}
+                    </td>
+                    <td style="padding: 10px;">{{ expense.description }}</td>
+                    <td style="padding: 10px; text-align:right;">₹{{ "%.2f"|format(expense.amount) }}</td>
+                    <td style="padding: 10px; text-align:center;">
+                        {% if expense.is_recurring %}
+                        <span class="recurring-badge" style="color:#0d6efd;">
+                            <i class="fas fa-sync-alt"></i> Recurring
+                        </span>
+                        {% else %}
+                        <span class="one-time-badge" style="color:#6c757d;">One-time</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 10px; text-align:center;">
+                        <form action="{{ url_for('delete_expense', expense_id=expense.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this expense?');" style="margin:0;">
+                            <button type="submit" class="btn btn-danger btn-sm">
+                                <i class="fas fa-trash-alt"></i> Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if not expenses.items %}
+        <div class="empty-state" style="text-align:center; padding: 3rem 0; color:#6c757d;">
+            <i class="fas fa-receipt" style="font-size:3rem; margin-bottom: 1rem;"></i>
+            <h3>No expenses found</h3>
+            <p>Start tracking your expenses to see them here</p>
+            <a href="{{ url_for('add_expense') }}" class="btn btn-primary">Add Your First Expense</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Pagination -->
+    {% if expenses.pages > 1 %}
+    <div class="pagination" style="margin-top: 1.5rem; display: flex; justify-content: center; align-items: center; gap: 1rem;">
+        {% if expenses.has_prev %}
+        <a href="{{ url_for('expenses', page=expenses.prev_num) }}" class="pagination-btn btn btn-outline-primary">
+            <i class="fas fa-chevron-left"></i> Previous
+        </a>
+        {% endif %}
+        
+        <span class="pagination-info" style="font-weight: 600;">
+            Page {{ expenses.page }} of {{ expenses.pages }}
+        </span>
+        
+        {% if expenses.has_next %}
+        <a href="{{ url_for('expenses', page=expenses.next_num) }}" class="pagination-btn btn btn-outline-primary">
+            Next <i class="fas fa-chevron-right"></i>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

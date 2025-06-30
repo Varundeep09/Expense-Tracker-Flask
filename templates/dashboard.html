@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - ExpenseWise{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <div class="dashboard-header">
+        <h1>Welcome back, {{ user.name }}!</h1>
+        <p>Here's your financial overview for this month</p>
+    </div>
+    
+    <!-- Budget Forecast Alert -->
+    {% if forecast.risk_level != 'low' %}
+    <div class="alert alert-{{ forecast.risk_level }}">
+        <div class="alert-content">
+            <div class="alert-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="alert-text">
+    <h3>{% if forecast.risk_level == 'high' %}Budget Alert!{% else %}Budget Warning{% endif %}</h3>
+    <p>You're projected to spend ₹{{ "%.2f"|format(forecast.predicted_total) }} this month 
+       {% if user.monthly_budget > 0 %}
+       ({{ "%.0f"|format((forecast.predicted_total / user.monthly_budget) * 100) }}% of budget)
+       {% endif %}
+    </p>
+</div>
+
+        </div>
+        <div class="recommendations">
+            {% for recommendation in forecast.recommendations %}
+            <p><i class="fas fa-lightbulb"></i> {{ recommendation }}</p>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-rupee-sign"></i>
+            </div>
+            <div class="stat-content">
+                <h3>₹{{ "%.2f"|format(forecast.current_spending) }}</h3>
+                <p>Spent This Month</p>
+                <div class="stat-change positive">
+                    <i class="fas fa-arrow-up"></i>
+                    <span>{{ expenses|length }} transactions</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="stat-content">
+                <h3>₹{{ "%.2f"|format(forecast.predicted_total) }}</h3>
+                <p>Predicted Month-End</p>
+                <div class="stat-change {{ 'negative' if forecast.predicted_total > user.monthly_budget and user.monthly_budget > 0 else 'positive' }}">
+                    <i class="fas fa-{{ 'arrow-up' if forecast.predicted_total > user.monthly_budget and user.monthly_budget > 0 else 'arrow-down' }}"></i>
+                    <span>₹{{ "%.2f"|format(forecast.daily_average) }}/day avg</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-piggy-bank"></i>
+            </div>
+            <div class="stat-content">
+                <h3>₹{{ "%.2f"|format(user.monthly_budget) }}</h3>
+                <p>Monthly Budget</p>
+                <div class="stat-change">
+                    <i class="fas fa-calendar"></i>
+                    <span>{{ forecast.days_left }} days left</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-percentage"></i>
+            </div>
+            <div class="stat-content">
+                <h3>{{ "%.0f"|format(((forecast.current_spending | float) / (user.monthly_budget | float)) * 100 if user.monthly_budget > 0 else 0) }}%</h3>
+
+                <p>Budget Used</p>
+                <div class="stat-change">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>{{ "%.0f"|format(100 - (forecast.current_spending / (user.monthly_budget | float)) * 100 if user.monthly_budget > 0 else 100) }}% remaining</span>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h3>Spending Breakdown</h3>
+                <a href="{{ url_for('export_csv') }}" class="btn btn-sm btn-secondary">
+                    <i class="fas fa-download"></i> Export CSV
+                </a>
+            </div>
+            <div class="chart-container">
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+        
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h3>Recent Transactions</h3>
+                <a href="{{ url_for('add_expense') }}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus"></i> Add Expense
+                </a>
+            </div>
+            <div class="transactions-list">
+                {% for expense in recent_expenses %}
+                <div class="transaction-item">
+                    <div class="transaction-icon">
+                        <i class="fas fa-{{ {
+                            'food': 'utensils',
+                            'transport': 'car',
+                            'entertainment': 'film',
+                            'shopping': 'shopping-bag',
+                            'bills': 'file-invoice',
+                            'healthcare': 'heartbeat',
+                            'education': 'graduation-cap',
+                            'travel': 'plane',
+                            'other': 'tag'
+                        }[expense.category] }}"></i>
+                    </div>
+                    <div class="transaction-details">
+                        <h4>{{ expense.description }}</h4>
+                        <p>{{ expense.category.title() }} • {{ expense.date.strftime('%b %d, %Y') }}</p>
+                    </div>
+                    <div class="transaction-amount">
+                        <span>₹{{ "%.2f"|format(expense.amount) }}</span>
+                        {% if expense.is_recurring %}
+                        <i class="fas fa-sync-alt recurring-icon" title="Recurring"></i>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                
+                {% if not recent_expenses %}
+                <div class="empty-state">
+                    <i class="fas fa-receipt"></i>
+                    <p>No expenses yet. <a href="{{ url_for('add_expense') }}">Add your first expense</a></p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Category Chart
+async function loadCategoryChart() {
+    try {
+        const response = await fetch('/api/chart_data');
+        const data = await response.json();
+        
+        const ctx = document.getElementById('categoryChart').getContext('2d');
+        
+        const colors = [
+            '#2563EB', '#059669', '#D97706', '#DC2626', '#7C3AED',
+            '#0891B2', '#EA580C', '#BE185D', '#4338CA'
+        ];
+        
+        const chartData = {
+            labels: Object.keys(data).map(key => key.charAt(0).toUpperCase() + key.slice(1)),
+            datasets: [{
+                data: Object.values(data),
+                backgroundColor: colors.slice(0, Object.keys(data).length),
+                borderWidth: 0,
+                hoverBorderWidth: 2,
+                hoverBorderColor: '#ffffff'
+            }]
+        };
+        
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    }
+                },
+                cutout: '70%'
+            }
+        });
+    } catch (error) {
+        console.error('Error loading chart data:', error);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadCategoryChart();
+});
+</script>
+{% endblock %}

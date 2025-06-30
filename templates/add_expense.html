@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Add Expense - ExpenseWise{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-card">
+        <div class="form-header">
+            <h2>Add New Expense</h2>
+            <p>Track your spending to stay on budget</p>
+        </div>
+        
+        <form method="POST" class="expense-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="amount">Amount</label>
+                    <div class="input-group">
+                        <span class="input-prefix">₹</span>
+                        <!-- ✅ Step 1: Inject budget and spending info -->
+                        <input type="number" id="amount" name="amount" step="0.01" required
+                            data-current-spending="{{ forecast.current_spending }}"
+                            data-monthly-budget="{{ user.monthly_budget }}">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="category">Category</label>
+                    <select id="category" name="category" required onchange="toggleOtherInput()">
+                        <option value="">Select a category</option>
+                        <option value="food">🍽️ Food & Dining</option>
+                        <option value="transport">🚗 Transportation</option>
+                        <option value="entertainment">🎬 Entertainment</option>
+                        <option value="shopping">🛍️ Shopping</option>
+                        <option value="bills">📋 Bills & Utilities</option>
+                        <option value="healthcare">🏥 Healthcare</option>
+                        <option value="education">🎓 Education</option>
+                        <option value="travel">✈️ Travel</option>
+                        <option value="other">🏷️ Other</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group" id="other_description_group" style="display: none;">
+                <label for="other_description">Please specify other expense</label>
+                <input type="text" id="other_description" name="other_description" placeholder="Describe your other expense (optional)">
+            </div>
+            
+            <div class="form-group">
+                <label for="description">Description</label>
+                <input type="text" id="description" name="description" placeholder="What did you spend on?" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="date">Date</label>
+                <input type="date" id="date" name="date" required>
+            </div>
+            
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="is_recurring" name="is_recurring" onchange="toggleRecurring()">
+                    <label for="is_recurring">This is a recurring expense</label>
+                </div>
+            </div>
+            
+            <div class="form-group" id="recurring_options" style="display: none;">
+                <label for="recurring_frequency">Frequency</label>
+                <select id="recurring_frequency" name="recurring_frequency">
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="yearly">Yearly</option>
+                </select>
+            </div>
+            
+            <div class="form-actions">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Add Expense</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Set today's date as default
+document.getElementById('date').valueAsDate = new Date();
+
+function toggleRecurring() {
+    const checkbox = document.getElementById('is_recurring');
+    const options = document.getElementById('recurring_options');
+    options.style.display = checkbox.checked ? 'block' : 'none';
+}
+
+function toggleOtherInput() {
+    const categorySelect = document.getElementById('category');
+    const otherInputGroup = document.getElementById('other_description_group');
+    if (categorySelect.value === 'other') {
+        otherInputGroup.style.display = 'block';
+    } else {
+        otherInputGroup.style.display = 'none';
+        document.getElementById('other_description').value = '';
+    }
+}
+
+// ✅ Step 2: Budget Warning Before Submit
+document.querySelector('.expense-form').addEventListener('submit', function(e) {
+    const amountInput = document.getElementById('amount');
+    const newExpense = parseFloat(amountInput.value);
+    const currentSpending = parseFloat(amountInput.dataset.currentSpending);
+    const monthlyBudget = parseFloat(amountInput.dataset.monthlyBudget);
+
+    if (!isNaN(newExpense) && !isNaN(currentSpending) && !isNaN(monthlyBudget)) {
+        const newTotal = currentSpending + newExpense;
+        if (monthlyBudget > 0 && newTotal > monthlyBudget) {
+            const proceed = confirm(
+                `⚠️ Warning: This expense will exceed your monthly budget!\n\n` +
+                `Budget: ₹${monthlyBudget.toFixed(2)}\n` +
+                `Current Spending: ₹${currentSpending.toFixed(2)}\n` +
+                `Projected Total: ₹${newTotal.toFixed(2)}\n\n` +
+                `Do you still want to continue?`
+            );
+            if (!proceed) {
+                e.preventDefault(); // Stop form
+                return;
+            }
+        }
+    }
+
+    const submitBtn = this.querySelector('button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+        submitBtn.disabled = true;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Budget Settings - ExpenseWise{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-card">
+        <div class="form-header">
+            <h2>Budget Settings</h2>
+            <p>Set your financial goals and alerts</p>
+        </div>
+        
+        <form method="POST" class="budget-form">
+            <div class="form-group">
+                <label for="monthly_budget">Monthly Budget</label>
+                <div class="input-group">
+                    <span class="input-prefix">₹</span>
+                    <input type="number" id="monthly_budget" name="monthly_budget" 
+                           step="0.01" value="{{ user.monthly_budget }}" required>
+                </div>
+                <small class="form-help">Set your total monthly spending limit</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="alert_threshold">Alert Threshold</label>
+                <div class="input-group">
+                    <input type="number" id="alert_threshold" name="alert_threshold" 
+                           min="0" max="100" value="{{ user.alert_threshold }}" required>
+                    <span class="input-suffix">%</span>
+                </div>
+                <small class="form-help">Get alerts when you reach this percentage of your budget</small>
+            </div>
+            
+            <div class="budget-preview">
+                <h3>Budget Overview</h3>
+                <div class="budget-bars">
+                    <div class="budget-bar">
+                        <div class="budget-label">
+                            <span>Alert Threshold</span>
+                            <span>${{ "%.2f"|format((user.monthly_budget * user.alert_threshold / 100)) }}</span>
+                        </div>
+                        <div class="budget-progress">
+                            <div class="budget-fill budget-warning" style="width: {{ user.alert_threshold }}%"></div>
+                        </div>
+                    </div>
+                    <div class="budget-bar">
+                        <div class="budget-label">
+                            <span>Monthly Budget</span>
+                            <span>${{ "%.2f"|format(user.monthly_budget) }}</span>
+                        </div>
+                        <div class="budget-progress">
+                            <div class="budget-fill budget-total" style="width: 100%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Save Settings</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
