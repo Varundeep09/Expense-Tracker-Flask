@@ -188,10 +188,13 @@ def login():
             if check_password_hash(user["password_hash"], password):
                 session["user_id"] = user["id"]
                 session["user_email"] = user["email"]
+                print("✅ Login successful")
                 return redirect(url_for("dashboard"))
             else:
+                print("❌ Login failed: Incorrect password")
                 return render_template("login.html", error="Invalid credentials")
         else:
+            print("❌ Login failed: Email not found")
             return render_template("login.html", error="User not found")
 
     return render_template("login.html")
@@ -267,7 +270,7 @@ def add_expense():
             request.form['category'],
             request.form['description'],
             request.form['date'],
-            1 if request.form.get('is_recurring') else 0,
+            True if request.form.get('is_recurring') == 'on' else False,
             request.form.get('recurring_frequency') if request.form.get('is_recurring') else None
         ))
         conn.commit()
