@@ -1,5 +1,4 @@
 from werkzeug.security import generate_password_hash, check_password_hash
-
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, make_response
 import os
 from datetime import datetime, timedelta
@@ -7,26 +6,22 @@ import csv
 from io import StringIO
 from collections import defaultdict
 import calendar
-import mysql.connector
-from werkzeug.security import generate_password_hash, check_password_hash
+import psycopg2
+import os
+from psycopg2.extras import RealDictCursor
+
+
 
 
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here-change-in-production'
 
-# MySQL Connection Setup
+
+# PostgreSQL Connection Setup (for Render)
 def get_db_connection():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="root",
-        database="expense_tracker",
-        
-    )
+    return psycopg2.connect(os.environ.get("DATABASE_URL"), cursor_factory=RealDictCursor)
 
-
-from werkzeug.security import generate_password_hash, check_password_hash
 
 # def hash_password(password):
 #     return generate_password_hash(password)
@@ -46,7 +41,7 @@ def get_monthly_expenses(user_id, year=None, month=None):
     end_date = datetime(year + 1, 1, 1).date() - timedelta(days=1) if month == 12 else datetime(year, month + 1, 1).date() - timedelta(days=1)
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     cursor.execute(
         'SELECT * FROM expenses WHERE user_id = %s AND date >= %s AND date <= %s ORDER BY date DESC',
         (user_id, start_date, end_date)
@@ -161,7 +156,7 @@ def register():
     if request.method == "POST":
         name = request.form["name"]
         email = request.form["email"]
-        password = request.form["password"]
+        password = generate_password_hash(request.form["password"])
         monthly_budget = request.form.get("monthly_budget", 0.0)
 
         conn = get_db_connection()
@@ -182,32 +177,25 @@ def login():
     if request.method == "POST":
         email = request.form["email"]
         password = request.form["password"]
-        print(f"[DEBUG] Login Attempt: {email}, password: {password}")
 
         conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
         user = cursor.fetchone()
         conn.close()
 
         if user:
-            print(f"[DEBUG] Found user: {user['email']}, checking password...")
-            print(f"[DEBUG] Input Password: {password}")
-            print(f"[DEBUG] Stored Password: {user['password_hash']}")
-
-            if password == user["password_hash"]:
+            if check_password_hash(user["password_hash"], password):
                 session["user_id"] = user["id"]
                 session["user_email"] = user["email"]
-                print("✅ Login successful")
                 return redirect(url_for("dashboard"))
             else:
-                print("❌ Login failed: Incorrect password")
                 return render_template("login.html", error="Invalid credentials")
         else:
-            print("❌ Login failed: Email not found")
             return render_template("login.html", error="User not found")
 
     return render_template("login.html")
+
 
 
 
@@ -224,7 +212,7 @@ def dashboard():
 
     user_id = session['user_id']
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))
     user = cursor.fetchone()
     user['monthly_budget'] = float(user['monthly_budget'])  # ✅ Convert Decimal to float
@@ -243,7 +231,7 @@ def dashboard():
         category_data[expense['category']] += float(expense['amount'])  # FIXED convert Decimal to float
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     cursor.execute('SELECT * FROM expenses WHERE user_id = %s ORDER BY created_at DESC LIMIT 5', (user_id,))
     recent_expenses = cursor.fetchall()
     conn.close()
@@ -291,7 +279,7 @@ def add_expense():
     # For GET request or if you want to render the form after POST failure:
     # Fetch user and expenses to calculate forecast
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))
     user = cursor.fetchone()
     conn.close()
@@ -312,7 +300,7 @@ def expenses():
     offset = (page - 1) * per_page
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     cursor.execute(
         'SELECT * FROM expenses WHERE user_id = %s ORDER BY date DESC LIMIT %s OFFSET %s',
@@ -373,7 +361,7 @@ def budget():
         return redirect(url_for('dashboard'))
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))
     user = cursor.fetchone()
     conn.close()
@@ -432,7 +420,7 @@ def delete_expense(expense_id):
     user_id = session['user_id']
     conn = get_db_connection()
 
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     cursor.execute('SELECT * FROM expenses WHERE id = %s AND user_id = %s', (expense_id, user_id))
     expense = cursor.fetchone()
     if not expense:
