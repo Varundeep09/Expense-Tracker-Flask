@@ -181,3 +181,27 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// Mobile Navbar Toggle
+document.addEventListener('DOMContentLoaded', function () {
+    const toggleBtn = document.getElementById('menuToggle');
+    const navLinks = document.getElementById('navLinks');
+
+    if (toggleBtn && navLinks) {
+        toggleBtn.addEventListener('click', function () {
+            navLinks.classList.toggle('open');
+            // Optional: toggle menu icon
+            this.innerHTML = navLinks.classList.contains('open')
+                ? '<i class="fas fa-times"></i>'
+                : '<i class="fas fa-bars"></i>';
+        });
+    }
+});
+
+
+document.querySelectorAll('#navLinks .nav-link').forEach(function (link) {
+    link.addEventListener('click', function () {
+        navLinks.classList.remove('open');
+        toggleBtn.innerHTML = '<i class="fas fa-bars"></i>';
+    });
+});
